@@ -3,12 +3,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Vote, Users, Clock, CheckCircle2, Shield, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Vote, Users, Clock, CheckCircle2 } from "lucide-react";
 import { Poll } from "./VotingDashboard";
-import { voteValidationService } from "@/services/voteValidation";
-import { mockAuthService } from "@/services/mockAuth";
-import { toast } from "sonner";
 
 interface VotingInterfaceProps {
   poll: Poll;
@@ -19,41 +15,12 @@ interface VotingInterfaceProps {
 export const VotingInterface = ({ poll, onVote, onBack }: VotingInterfaceProps) => {
   const [selectedOption, setSelectedOption] = useState<string>("");
   const [hasVoted, setHasVoted] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [validationError, setValidationError] = useState<string>("");
 
-  const currentUser = mockAuthService.getCurrentUser();
-  
-  // Check if user can vote when component loads
-  const voteValidation = voteValidationService.canUserVote(poll.id);
-
-  const handleVote = async () => {
-    if (!selectedOption || hasVoted || isSubmitting) return;
-
-    setIsSubmitting(true);
-    setValidationError("");
-
-    // Double-check validation
-    const validation = voteValidationService.canUserVote(poll.id);
-    if (!validation.canVote) {
-      setValidationError(validation.reason || "Cannot vote at this time");
-      setIsSubmitting(false);
-      return;
+  const handleVote = () => {
+    if (selectedOption && !hasVoted) {
+      onVote(poll.id, selectedOption);
+      setHasVoted(true);
     }
-
-    // Record the vote
-    const success = voteValidationService.recordVote(poll.id, selectedOption);
-    if (!success) {
-      setValidationError("Failed to record vote. Please try again.");
-      setIsSubmitting(false);
-      return;
-    }
-
-    // Update the poll data
-    onVote(poll.id, selectedOption);
-    setHasVoted(true);
-    setIsSubmitting(false);
-    toast.success("Vote submitted successfully!");
   };
 
   const getPercentage = (votes: number) => {
@@ -99,39 +66,7 @@ export const VotingInterface = ({ poll, onVote, onBack }: VotingInterfaceProps) 
             </CardHeader>
 
             <CardContent className="space-y-6">
-              {/* User Authentication Status */}
-              <div className="bg-muted/50 p-4 rounded-lg">
-                <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-success" />
-                  <div>
-                    <p className="font-medium text-success">Authenticated Voter</p>
-                    <p className="text-sm text-muted-foreground">
-                      Logged in as: {currentUser?.name} ({currentUser?.email})
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Vote Validation Status */}
-              {!voteValidation.canVote && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    {voteValidation.reason}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {validationError && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    {validationError}
-                  </AlertDescription>
-                </Alert>
-              )}
-
-              {!hasVoted && poll.status === 'active' && voteValidation.canVote ? (
+              {!hasVoted && poll.status === 'active' ? (
                 <>
                   <div className="space-y-4">
                     <h3 className="text-lg font-semibold">Select your choice:</h3>
@@ -160,20 +95,11 @@ export const VotingInterface = ({ poll, onVote, onBack }: VotingInterfaceProps) 
                       variant="hero"
                       size="lg"
                       onClick={handleVote}
-                      disabled={!selectedOption || isSubmitting || !voteValidation.canVote}
+                      disabled={!selectedOption}
                       className="min-w-[200px] text-lg gap-3"
                     >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Vote className="w-5 h-5" />
-                          Cast Your Vote
-                        </>
-                      )}
+                      <Vote className="w-5 h-5" />
+                      Cast Your Vote
                     </Button>
                   </div>
                 </>

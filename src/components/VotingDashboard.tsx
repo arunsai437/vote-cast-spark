@@ -1,16 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Vote, Users, BarChart3, Clock, CheckCircle, Shield, LogOut } from "lucide-react";
+import { Plus, Vote, Users, BarChart3, Clock, CheckCircle } from "lucide-react";
 import { CreatePollDialog } from "./CreatePollDialog";
 import { VotingInterface } from "./VotingInterface";
 import { ResultsView } from "./ResultsView";
-import { LoginDialog } from "./LoginDialog";
-import { SecurityMonitor } from "./SecurityMonitor";
-import { mockAuthService } from "@/services/mockAuth";
-import { User } from "@/types/auth";
-import { toast } from "sonner";
 
 export interface Poll {
   id: string;
@@ -52,22 +47,8 @@ const VotingDashboard = () => {
   const [currentView, setCurrentView] = useState<'dashboard' | 'vote' | 'results'>('dashboard');
   const [selectedPoll, setSelectedPoll] = useState<Poll | null>(null);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
-  const [showLoginDialog, setShowLoginDialog] = useState(false);
-  const [showSecurityMonitor, setShowSecurityMonitor] = useState(false);
-  const [currentUser, setCurrentUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const user = mockAuthService.getCurrentUser();
-    setCurrentUser(user);
-  }, []);
 
   const handleCreatePoll = (newPoll: Omit<Poll, 'id' | 'votes' | 'totalVotes'>) => {
-    if (!mockAuthService.isAuthenticated()) {
-      toast.error("Please login to create polls");
-      setShowLoginDialog(true);
-      return;
-    }
-
     const poll: Poll = {
       ...newPoll,
       id: Date.now().toString(),
@@ -76,7 +57,6 @@ const VotingDashboard = () => {
     };
     setPolls([...polls, poll]);
     setShowCreateDialog(false);
-    toast.success("Poll created successfully!");
   };
 
   const handleVote = (pollId: string, option: string) => {
@@ -90,28 +70,6 @@ const VotingDashboard = () => {
       }
       return poll;
     }));
-  };
-
-  const handleLoginSuccess = () => {
-    const user = mockAuthService.getCurrentUser();
-    setCurrentUser(user);
-    toast.success(`Welcome back, ${user?.name}!`);
-  };
-
-  const handleLogout = () => {
-    mockAuthService.logout();
-    setCurrentUser(null);
-    toast.success("Logged out successfully");
-  };
-
-  const handleVoteClick = (poll: Poll) => {
-    if (!mockAuthService.isAuthenticated()) {
-      toast.error("Please login to vote");
-      setShowLoginDialog(true);
-      return;
-    }
-    setSelectedPoll(poll);
-    setCurrentView('vote');
   };
 
   const getStatusColor = (status: Poll['status']) => {
@@ -151,50 +109,15 @@ const VotingDashboard = () => {
               <h1 className="text-3xl font-bold text-foreground">Voting Dashboard</h1>
               <p className="text-muted-foreground mt-2">Manage and participate in polls and elections</p>
             </div>
-            <div className="flex items-center gap-3">
-              {currentUser ? (
-                <>
-                  <div className="flex items-center gap-2 text-sm">
-                    <Badge variant="outline" className="flex items-center gap-1">
-                      <Shield className="w-3 h-3" />
-                      {currentUser.name}
-                    </Badge>
-                    {currentUser.role === 'admin' && (
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setShowSecurityMonitor(true)}
-                      >
-                        <Shield className="w-4 h-4" />
-                        Security
-                      </Button>
-                    )}
-                    <Button variant="outline" size="sm" onClick={handleLogout}>
-                      <LogOut className="w-4 h-4" />
-                    </Button>
-                  </div>
-                  <Button 
-                    variant="hero" 
-                    size="lg"
-                    onClick={() => setShowCreateDialog(true)}
-                    className="gap-3"
-                  >
-                    <Plus className="w-5 h-5" />
-                    Create Poll
-                  </Button>
-                </>
-              ) : (
-                <Button 
-                  variant="hero" 
-                  size="lg"
-                  onClick={() => setShowLoginDialog(true)}
-                  className="gap-3"
-                >
-                  <Shield className="w-5 h-5" />
-                  Login to Vote
-                </Button>
-              )}
-            </div>
+            <Button 
+              variant="hero" 
+              size="lg"
+              onClick={() => setShowCreateDialog(true)}
+              className="gap-3"
+            >
+              <Plus className="w-5 h-5" />
+              Create Poll
+            </Button>
           </div>
         </div>
 
@@ -243,10 +166,13 @@ const VotingDashboard = () => {
                       variant="vote" 
                       size="sm" 
                       className="flex-1"
-                      onClick={() => handleVoteClick(poll)}
+                      onClick={() => {
+                        setSelectedPoll(poll);
+                        setCurrentView('vote');
+                      }}
                     >
                       <Vote className="w-4 h-4" />
-                      {currentUser ? "Vote Now" : "Login to Vote"}
+                      Vote Now
                     </Button>
                   ) : (
                     <Button variant="outline" size="sm" disabled className="flex-1">
@@ -276,17 +202,6 @@ const VotingDashboard = () => {
           open={showCreateDialog}
           onOpenChange={setShowCreateDialog}
           onCreatePoll={handleCreatePoll}
-        />
-
-        <LoginDialog
-          open={showLoginDialog}
-          onOpenChange={setShowLoginDialog}
-          onSuccess={handleLoginSuccess}
-        />
-
-        <SecurityMonitor
-          isOpen={showSecurityMonitor}
-          onClose={() => setShowSecurityMonitor(false)}
         />
       </div>
     </div>
