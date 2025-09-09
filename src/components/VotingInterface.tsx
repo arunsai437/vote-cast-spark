@@ -4,10 +4,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { ArrowLeft, Vote, Users, Clock, CheckCircle2, Shield, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Vote, Users, Clock, CheckCircle2, Shield, AlertTriangle, Fingerprint } from "lucide-react";
 import { Poll } from "./VotingDashboard";
 import { voteValidationService } from "@/services/voteValidation";
 import { mockAuthService } from "@/services/mockAuth";
+import { BiometricVerification } from "./BiometricVerification";
 import { toast } from "sonner";
 
 interface VotingInterfaceProps {
@@ -21,11 +22,28 @@ export const VotingInterface = ({ poll, onVote, onBack }: VotingInterfaceProps) 
   const [hasVoted, setHasVoted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [validationError, setValidationError] = useState<string>("");
+  const [showBiometricVerification, setShowBiometricVerification] = useState(false);
+  const [biometricVerified, setBiometricVerified] = useState(false);
 
   const currentUser = mockAuthService.getCurrentUser();
   
   // Check if user can vote when component loads
   const voteValidation = voteValidationService.canUserVote(poll.id);
+
+  const handleStartBiometricVerification = () => {
+    if (!selectedOption) {
+      toast.error("Please select an option before proceeding to verification");
+      return;
+    }
+    setShowBiometricVerification(true);
+  };
+
+  const handleBiometricComplete = (verified: boolean) => {
+    setBiometricVerified(verified);
+    if (verified) {
+      handleVote();
+    }
+  };
 
   const handleVote = async () => {
     if (!selectedOption || hasVoted || isSubmitting) return;
@@ -103,12 +121,18 @@ export const VotingInterface = ({ poll, onVote, onBack }: VotingInterfaceProps) 
               <div className="bg-muted/50 p-4 rounded-lg">
                 <div className="flex items-center gap-3">
                   <Shield className="w-5 h-5 text-success" />
-                  <div>
+                  <div className="flex-1">
                     <p className="font-medium text-success">Authenticated Voter</p>
                     <p className="text-sm text-muted-foreground">
                       Logged in as: {currentUser?.name} ({currentUser?.email})
                     </p>
                   </div>
+                  {biometricVerified && (
+                    <div className="flex items-center gap-1 text-xs text-success">
+                      <Fingerprint className="w-3 h-3" />
+                      Biometric Verified
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -155,26 +179,35 @@ export const VotingInterface = ({ poll, onVote, onBack }: VotingInterfaceProps) 
                     </RadioGroup>
                   </div>
 
-                  <div className="flex justify-center">
-                    <Button
-                      variant="hero"
-                      size="lg"
-                      onClick={handleVote}
-                      disabled={!selectedOption || isSubmitting || !voteValidation.canVote}
-                      className="min-w-[200px] text-lg gap-3"
-                    >
-                      {isSubmitting ? (
-                        <>
-                          <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <Vote className="w-5 h-5" />
-                          Cast Your Vote
-                        </>
-                      )}
-                    </Button>
+                  <div className="space-y-4">
+                    <Alert>
+                      <Shield className="h-4 w-4" />
+                      <AlertDescription>
+                        For maximum security, biometric verification is required before voting. This includes fingerprint, face recognition, and Aadhaar verification.
+                      </AlertDescription>
+                    </Alert>
+
+                    <div className="flex justify-center">
+                      <Button
+                        variant="hero"
+                        size="lg"
+                        onClick={handleStartBiometricVerification}
+                        disabled={!selectedOption || isSubmitting || !voteValidation.canVote}
+                        className="min-w-[250px] text-lg gap-3"
+                      >
+                        {isSubmitting ? (
+                          <>
+                            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <Fingerprint className="w-5 h-5" />
+                            Verify & Cast Vote
+                          </>
+                        )}
+                      </Button>
+                    </div>
                   </div>
                 </>
               ) : (
@@ -220,6 +253,13 @@ export const VotingInterface = ({ poll, onVote, onBack }: VotingInterfaceProps) 
             </CardContent>
           </Card>
         </div>
+
+        <BiometricVerification 
+          isOpen={showBiometricVerification}
+          onClose={() => setShowBiometricVerification(false)}
+          onComplete={handleBiometricComplete}
+          pollTitle={poll.title}
+        />
       </div>
     </div>
   );
