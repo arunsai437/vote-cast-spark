@@ -5,6 +5,7 @@ export interface User {
   isVerified: boolean;
   role: 'admin' | 'voter';
   createdAt: Date;
+  phone?: string;
 }
 
 export interface AuthState {

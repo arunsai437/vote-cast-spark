@@ -8,7 +8,8 @@ const MOCK_USERS: User[] = [
     name: "Admin User",
     isVerified: true,
     role: 'admin',
-    createdAt: new Date('2024-01-01')
+    createdAt: new Date('2024-01-01'),
+    phone: "9999999999"
   },
   {
     id: "2", 
@@ -16,7 +17,8 @@ const MOCK_USERS: User[] = [
     name: "John Doe",
     isVerified: true,
     role: 'voter',
-    createdAt: new Date('2024-01-15')
+    createdAt: new Date('2024-01-15'),
+    phone: "9876543210"
   },
   {
     id: "3",
@@ -24,7 +26,8 @@ const MOCK_USERS: User[] = [
     name: "Jane Smith",
     isVerified: false,
     role: 'voter',
-    createdAt: new Date('2024-02-01')
+    createdAt: new Date('2024-02-01'),
+    phone: "9876543211"
   }
 ];
 
@@ -131,6 +134,65 @@ class MockAuthService {
     };
     this.securityLogs.push(log);
     console.log('Security Log:', log);
+  }
+
+  async loginWithPhone(phone: string, otp: string): Promise<{ success: boolean; user?: User; error?: string }> {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Rate limiting simulation
+    const attempts = this.getLoginAttempts();
+    if (attempts >= 3) {
+      this.logSecurity('rate_limit', 'Too many login attempts');
+      return { success: false, error: 'Too many attempts. Please try again later.' };
+    }
+
+    const user = MOCK_USERS.find(u => u.phone === phone);
+    
+    if (!user || otp !== '123456') {
+      this.incrementLoginAttempts();
+      this.logSecurity('login', `Failed login attempt for ${phone}`);
+      return { success: false, error: 'Invalid phone number or OTP' };
+    }
+
+    if (!user.isVerified) {
+      return { success: false, error: 'Please verify your phone number before logging in' };
+    }
+
+    this.currentUser = user;
+    localStorage.setItem('voting_user', JSON.stringify(user));
+    localStorage.removeItem('login_attempts');
+    this.logSecurity('login', `User ${user.phone} logged in successfully`, user.id);
+    
+    return { success: true, user };
+  }
+
+  async registerWithPhone(phone: string, name: string, otp: string): Promise<{ success: boolean; error?: string }> {
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    if (MOCK_USERS.find(u => u.phone === phone)) {
+      return { success: false, error: 'Phone number already registered' };
+    }
+
+    if (otp !== '123456') {
+      return { success: false, error: 'Invalid OTP' };
+    }
+
+    // In real app, would verify OTP
+    const newUser: User = {
+      id: Date.now().toString(),
+      email: `${phone}@phone.com`,
+      name,
+      isVerified: true,
+      role: 'voter',
+      createdAt: new Date(),
+      phone
+    };
+
+    MOCK_USERS.push(newUser);
+    this.logSecurity('login', `New user registered: ${phone}`, newUser.id);
+    
+    return { success: true };
   }
 
   getSecurityLogs(): SecurityLog[] {
