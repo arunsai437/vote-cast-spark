@@ -31,6 +31,8 @@ export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps)
     name: "",
     otp: ""
   });
+  
+  const [otpSent, setOtpSent] = useState(false);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -55,8 +57,35 @@ export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps)
     }
   };
 
+  const handleSendOtp = async () => {
+    if (!registerForm.phone || !registerForm.name) {
+      setError("Please enter your name and phone number first");
+      return;
+    }
+    
+    setIsLoading(true);
+    setError("");
+    
+    try {
+      // Simulate sending OTP
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      setOtpSent(true);
+      toast.success("OTP sent to your phone number!");
+      setError("");
+    } catch (err) {
+      setError("Failed to send OTP. Please try again.");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!otpSent) {
+      await handleSendOtp();
+      return;
+    }
     
     setIsLoading(true);
     setError("");
@@ -71,6 +100,7 @@ export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps)
       if (result.success) {
         toast.success("Registration successful! You can now login.");
         setRegisterForm({ phone: "", name: "", otp: "" });
+        setOtpSent(false);
       } else {
         setError(result.error || "Registration failed");
       }
@@ -157,68 +187,101 @@ export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps)
 
             <TabsContent value="register" className="space-y-4">
               <form onSubmit={handleRegister} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="register-name">Full Name</Label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="register-name"
-                      type="text"
-                      placeholder="Enter your full name"
-                      className="pl-10"
-                      value={registerForm.name}
-                      onChange={(e) => setRegisterForm({...registerForm, name: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
+                {!otpSent ? (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-name">Full Name</Label>
+                      <div className="relative">
+                        <User className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="register-name"
+                          type="text"
+                          placeholder="Enter your full name"
+                          className="pl-10"
+                          value={registerForm.name}
+                          onChange={(e) => setRegisterForm({...registerForm, name: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="register-phone">Phone Number</Label>
-                  <div className="relative">
-                    <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="register-phone"
-                      type="tel"
-                      placeholder="Enter your phone number"
-                      className="pl-10"
-                      value={registerForm.phone}
-                      onChange={(e) => setRegisterForm({...registerForm, phone: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <Label htmlFor="register-otp">OTP</Label>
-                  <div className="relative">
-                    <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="register-otp"
-                      type="text"
-                      placeholder="Enter OTP"
-                      className="pl-10"
-                      value={registerForm.otp}
-                      onChange={(e) => setRegisterForm({...registerForm, otp: e.target.value})}
-                      required
-                    />
-                  </div>
-                </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="register-phone">Phone Number</Label>
+                      <div className="relative">
+                        <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="register-phone"
+                          type="tel"
+                          placeholder="Enter your phone number"
+                          className="pl-10"
+                          value={registerForm.phone}
+                          onChange={(e) => setRegisterForm({...registerForm, phone: e.target.value})}
+                          required
+                        />
+                      </div>
+                    </div>
 
-                {error && (
-                  <Alert variant="destructive">
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading || !registerForm.phone || !registerForm.name}
+                    >
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Send OTP
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <div className="text-sm text-muted-foreground p-4 bg-muted/50 rounded-lg">
+                      <strong>OTP sent to:</strong> {registerForm.phone}<br />
+                      <button 
+                        type="button" 
+                        onClick={() => setOtpSent(false)} 
+                        className="text-primary underline mt-1"
+                      >
+                        Change phone number
+                      </button>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <Label htmlFor="register-otp">Enter OTP</Label>
+                      <div className="relative">
+                        <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                        <Input
+                          id="register-otp"
+                          type="text"
+                          placeholder="Enter the 6-digit OTP"
+                          className="pl-10"
+                          value={registerForm.otp}
+                          onChange={(e) => setRegisterForm({...registerForm, otp: e.target.value})}
+                          maxLength={6}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    {error && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{error}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <Button 
+                      type="submit" 
+                      className="w-full" 
+                      disabled={isLoading || registerForm.otp.length !== 6}
+                    >
+                      {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                      Verify & Create Account
+                    </Button>
+                  </>
                 )}
-
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading}
-                >
-                  {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  Create Account
-                </Button>
               </form>
             </TabsContent>
           </Tabs>
