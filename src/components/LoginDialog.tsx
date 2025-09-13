@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -18,8 +18,7 @@ interface LoginDialogProps {
 export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps) => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  
-  // Login form
+  const [resendTimer, setResendTimer] = useState(0);
   const [loginForm, setLoginForm] = useState({
     phone: "9876543210", // Pre-filled for demo
     otp: "123456"
@@ -33,6 +32,17 @@ export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps)
   });
   
   const [otpSent, setOtpSent] = useState(false);
+  
+  // Timer for resend OTP functionality
+  useEffect(() => {
+    let interval: NodeJS.Timeout;
+    if (resendTimer > 0) {
+      interval = setInterval(() => {
+        setResendTimer(prev => prev - 1);
+      }, 1000);
+    }
+    return () => clearInterval(interval);
+  }, [resendTimer]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,6 +80,7 @@ export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps)
       // Simulate sending OTP
       await new Promise(resolve => setTimeout(resolve, 1000));
       setOtpSent(true);
+      setResendTimer(30); // Start 30-second timer
       toast.success("OTP sent to your phone number!");
       setError("");
     } catch (err) {
@@ -247,6 +258,23 @@ export const LoginDialog = ({ open, onOpenChange, onSuccess }: LoginDialogProps)
                       >
                         Change phone number
                       </button>
+                      <div className="mt-3 flex items-center justify-between">
+                        <span className="text-xs">Didn't receive OTP?</span>
+                        {resendTimer > 0 ? (
+                          <span className="text-xs text-muted-foreground">
+                            Resend in {resendTimer}s
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={handleSendOtp}
+                            className="text-xs text-primary underline hover:no-underline"
+                            disabled={isLoading}
+                          >
+                            Resend OTP
+                          </button>
+                        )}
+                      </div>
                     </div>
                     
                     <div className="space-y-2">
